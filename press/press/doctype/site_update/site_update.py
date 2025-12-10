@@ -720,10 +720,12 @@ class SiteUpdate(Document):
 
 	@frappe.whitelist()
 	def set_status(self, status):
-		return self.update_status(self.name, status)
+		return self.update_status(self, status)
 
 	@classmethod
-	def update_status(cls, name, status):
+	def update_status(cls, doc, status):
+		name = doc if not isinstance(doc, Document) else doc.name
+
 		if status == "Cancelled":
 			try:
 				if (
@@ -736,7 +738,9 @@ class SiteUpdate(Document):
 					"The update is probably underway. Please reload/refresh to get the latest status."
 				)
 
-		frappe.db.set_value("Site Update", name, "status", status)
+		_doc = doc if isinstance(doc, Document) else frappe.get_doc("Site Update", name)
+		_doc.status = status
+		_doc.save()
 
 
 def update_status(name: str, status: str):
