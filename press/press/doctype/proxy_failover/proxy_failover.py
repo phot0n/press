@@ -104,23 +104,24 @@ class ProxyFailover(Document, StepHandler):
 		).run()
 
 		cluster = frappe.get_doc("Cluster", primary_proxy.cluster)
-		client = cluster.get_aws_client()
-		client.authorize_security_group_ingress(
-			GroupId=cluster.proxy_security_group_id,
-			IpPermissions=[
-				{
-					"FromPort": 8443,
-					"IpProtocol": "tcp",
-					"IpRanges": [
-						{
-							"CidrIp": "0.0.0.0/0",
-							"Description": "HTTPS Alternative Port for Agent and Prometheus",
-						}
-					],
-					"ToPort": 8443,
-				},
-			],
-		)
+		if cluster.cloud_provider == "AWS EC2":
+			client = cluster.get_aws_client()
+			client.authorize_security_group_ingress(
+				GroupId=cluster.proxy_security_group_id,
+				IpPermissions=[
+					{
+						"FromPort": 8443,
+						"IpProtocol": "tcp",
+						"IpRanges": [
+							{
+								"CidrIp": "0.0.0.0/0",
+								"Description": "HTTPS Alternative Port for Agent and Prometheus",
+							}
+						],
+						"ToPort": 8443,
+					},
+				],
+			)
 
 		if self.primary not in (alt_port_servers := servers_using_alternative_port_for_communication()):
 			alt_port_servers.append(self.primary)
