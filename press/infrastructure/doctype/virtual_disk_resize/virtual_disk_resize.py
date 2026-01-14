@@ -326,8 +326,6 @@ class VirtualDiskResize(Document):
 		self.new_volume_size = max(self.new_filesystem_size, self.expected_disk_size)
 
 		if self.new_volume_size != self.expected_disk_size:
-			self.status = Status.Failure
-			self.save()
 			frappe.throw(
 				f"Volume size mismatch expected: {self.expected_disk_size} resolved: {self.new_volume_size}",
 				frappe.ValidationError,
@@ -337,9 +335,6 @@ class VirtualDiskResize(Document):
 		self.save()
 
 	def create_new_volume(self):
-		# Lock the row to prevent concurrent modifications
-		frappe.get_value("Virtual Machine", self.virtual_machine, "status", for_update=True)
-
 		self.new_volume_id = self.machine.attach_new_volume(
 			self.new_volume_size,
 			iops=self.new_volume_iops,
