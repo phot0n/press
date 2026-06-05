@@ -1,134 +1,140 @@
 [
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2025-11-26 15:28:08.243873",
-  "name": "Auto Scale Application Server"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2026-04-14 11:33:58.268508",
-  "name": "Snapshot Disk"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2025-08-12 16:24:10.555919",
-  "name": "Attach Volume"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2024-02-05 17:08:00.514456",
-  "name": "Create Server Snapshot"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2025-09-08 11:42:40.490054",
-  "name": "Archive Server"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2024-01-05 13:40:21.038901",
-  "name": "Upgrade MariaDB"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2025-02-14 14:30:00.676187",
-  "name": "Increase Disk Size"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2025-11-12 09:35:41.121169",
-  "name": "Prune Docker system"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2025-11-12 09:35:21.819679",
-  "name": "Increase Swap"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2024-12-06 10:59:08.032149",
-  "name": "Stop and Start Server"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2025-11-12 09:34:59.467479",
-  "name": "Reset Swap"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2025-07-11 15:20:56.780290",
-  "name": "Warn disk at 80%"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2025-07-25 21:43:11.895128",
-  "name": "Trigger Build Server Cleanup"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2025-08-31 20:54:46.857348",
-  "name": "Create Server (old)"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2025-09-08 11:36:55.450275",
-  "name": "Resume Services After Snapshot"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2025-11-12 11:06:08.243873",
-  "name": "Prune Mirror Registry"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2025-12-18 15:28:08.243873",
-  "name": "Auto Scale Up Application Server"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2025-12-18 15:28:08.243873",
-  "name": "Auto Scale Down Application Server"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2026-02-22 22:29:46.984146",
-  "name": "Resize Server"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2026-04-08 15:12:31.123007",
-  "name": "Create Server"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2026-03-18 17:20:29.325620",
-  "name": "Remove On-Prem Failover"
- },
- {
-  "docstatus": 0,
-  "doctype": "Press Job Type",
-  "modified": "2026-03-18 17:17:19.436686",
-  "name": "Setup On-Prem Failover"
- }
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2026-06-04 00:00:00.000000",
+		"name": "Add ZFS Volume"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2025-11-26 15:28:08.243873",
+		"name": "Auto Scale Application Server"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2026-04-14 11:33:58.268508",
+		"name": "Snapshot Disk"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2025-08-12 16:24:10.555919",
+		"name": "Attach Volume"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2024-02-05 17:08:00.514456",
+		"name": "Create Server Snapshot"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2025-09-08 11:42:40.490054",
+		"name": "Archive Server"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2024-01-05 13:40:21.038901",
+		"name": "Upgrade MariaDB"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2025-02-14 14:30:00.676187",
+		"name": "Increase Disk Size"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2025-11-12 09:35:41.121169",
+		"name": "Prune Docker system"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2025-11-12 09:35:21.819679",
+		"name": "Increase Swap"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2024-12-06 10:59:08.032149",
+		"name": "Stop and Start Server"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2025-11-12 09:34:59.467479",
+		"name": "Reset Swap"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2025-07-11 15:20:56.780290",
+		"name": "Warn disk at 80%"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2025-07-25 21:43:11.895128",
+		"name": "Trigger Build Server Cleanup"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2025-08-31 20:54:46.857348",
+		"name": "Create Server (old)"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2025-09-08 11:36:55.450275",
+		"name": "Resume Services After Snapshot"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2025-11-12 11:06:08.243873",
+		"name": "Prune Mirror Registry"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2025-12-18 15:28:08.243873",
+		"name": "Auto Scale Up Application Server"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2025-12-18 15:28:08.243873",
+		"name": "Auto Scale Down Application Server"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2026-02-22 22:29:46.984146",
+		"name": "Resize Server"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2026-04-08 15:12:31.123007",
+		"name": "Create Server"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2026-03-18 17:20:29.325620",
+		"name": "Remove On-Prem Failover"
+	},
+	{
+		"docstatus": 0,
+		"doctype": "Press Job Type",
+		"modified": "2026-03-18 17:17:19.436686",
+		"name": "Setup On-Prem Failover"
+	}
 ]

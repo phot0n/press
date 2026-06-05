@@ -1,0 +1,28 @@
+---
+- name: Install ZFS utilities
+  apt:
+    name: zfsutils-linux
+    state: present
+    update_cache: yes
+
+- name: Check if ZFS pool exists
+  command: zpool list {{ zfs_pool_name }}
+  register: zpool_check
+  failed_when: false
+  changed_when: false
+
+- name: Create ZFS pool
+  # raid-0 (striped) over the data volumes. autoexpand grows the pool when a
+  # member volume is resized at the provider (see zfs_pool_expand role).
+  command: zpool create -o autoexpand=on -f {{ zfs_pool_name }} {{ zfs_pool_devices | join(' ') }}
+  when: zpool_check.rc != 0
+
+- name: Check if ZFS dataset exists
+  command: zfs list {{ zfs_pool_name }}/{{ zfs_dataset }}
+  register: dataset_check
+  failed_when: false
+  changed_when: false
+
+- name: Create ZFS dataset
+  command: zfs create -o mountpoint={{ zfs_mountpoint }} {{ zfs_pool_name }}/{{ zfs_dataset }}
+  when: dataset_check.rc != 0

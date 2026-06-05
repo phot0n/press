@@ -37,9 +37,11 @@ class IncreaseDiskSizeJob(PressJob):
 		if self.server_doc.provider != "AWS EC2":
 			return
 
+		# TODO: we need the expand zfs pool as a separate step for all providers
+
 		plays = frappe.get_all(
 			"Ansible Play",
-			{"server": self.server, "play": "Extend EC2 Volume"},
+			{"server": self.server, "play": ("in", ["Extend EC2 Volume", "Expand ZFS Pool"])},
 			["status"],
 			order_by="creation desc",
 			limit=1,

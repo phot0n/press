@@ -86,6 +86,7 @@ class Cluster(Document):
 		disable_public_ips_for_servers: DF.Check
 		enable_autoscaling: DF.Check
 		enable_periodic_flush_table: DF.Check
+		enable_zfs: DF.Check
 		flush_table_execution_hour: DF.Int
 		frappe_compute_api_key: DF.Data | None
 		frappe_compute_api_secret: DF.Password | None

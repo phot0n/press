@@ -25,6 +25,7 @@ def _init_jobs_registry() -> None:
 	if _JOBS_REGISTRY:
 		return
 
+	from press.press.doctype.press_job.jobs.add_zfs_volume import AddZFSVolumeJob
 	from press.press.doctype.press_job.jobs.archive_server import ArchiveServerJob
 	from press.press.doctype.press_job.jobs.attach_volume import AttachVolumeJob
 	from press.press.doctype.press_job.jobs.auto_scale_application_server import (
@@ -79,6 +80,7 @@ def _init_jobs_registry() -> None:
 		"Trigger Build Server Cleanup": TriggerBuildServerCleanupJob,
 		"Upgrade MariaDB": UpgradeMariaDBJob,
 		"Warn disk at 80%": WarnDiskJob,
+		"Add ZFS Volume": AddZFSVolumeJob,
 	}
 
 

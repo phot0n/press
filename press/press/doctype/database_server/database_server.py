@@ -67,6 +67,7 @@ class DatabaseServer(BaseServer):
 		enable_binlog_upload_to_s3: DF.Check
 		enable_physical_backup: DF.Check
 		enable_schema_size_parser: DF.Check
+		enable_zfs: DF.Check
 		frappe_public_key: DF.Code | None
 		frappe_user_password: DF.Password | None
 		gtid_binlog_pos: DF.Data | None
@@ -848,6 +849,7 @@ class DatabaseServer(BaseServer):
 					"mariadb_depends_on_mounts": self.mariadb_depends_on_mounts,
 					"nat_gateway_ip": self.get_nat_gateway_ip(),
 					**self.get_mount_variables(),
+					**self.get_zfs_variables(),
 				},
 			)
 			play = ansible.run()

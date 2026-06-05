@@ -22,6 +22,7 @@
 		"has_add_on_storage_support",
 		"enable_autoscaling",
 		"has_unified_server_support",
+		"enable_zfs",
 		"billing_section",
 		"team",
 		"by_default_select_unified_mode",
@@ -319,6 +320,13 @@
 			"fieldname": "enable_autoscaling",
 			"fieldtype": "Check",
 			"label": "Enable Autoscaling"
+		},
+		{
+			"default": "0",
+			"description": "Run ZFS on data volumes for new servers in this cluster. Enables ZFS snapshot/restore for providers without disk snapshots.",
+			"fieldname": "enable_zfs",
+			"fieldtype": "Check",
+			"label": "Enable ZFS for Data Volumes"
 		},
 		{
 			"default": "0",

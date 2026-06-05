@@ -1,0 +1,21 @@
+---
+# Reconcile pool membership: add any data volume that is not already a pool member.
+# A member device reports FSTYPE "zfs_member"; a newly attached volume does not
+# (it may be blank or ext4-formatted, e.g. Hetzner), so -f forces past any signature.
+- name: Check filesystem on candidate devices
+  command: lsblk -no FSTYPE {{ item }}
+  register: fstype_check
+  changed_when: false
+  failed_when: false
+  loop: '{{ zfs_pool_devices }}'
+
+- name: Add new devices to pool
+  command: zpool add -f {{ zfs_pool_name }} {{ item.item }}
+  loop: '{{ fstype_check.results }}'
+  loop_control:
+    label: '{{ item.item }}'
+  when: "'zfs_member' not in item.stdout"
+
+- name: Show pool status
+  command: zpool list {{ zfs_pool_name }}
+  changed_when: false

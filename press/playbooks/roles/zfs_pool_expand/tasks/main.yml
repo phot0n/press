@@ -1,0 +1,11 @@
+---
+# When a member volume is resized at the provider, grow the vdev to use the new
+# space. autoexpand=on is set on the pool, but `zpool online -e` is the reliable
+# trigger. No partition/resize2fs: ZFS uses whole unpartitioned disks. Idempotent.
+- name: Expand vdevs to use resized volumes
+  command: zpool online -e {{ zfs_pool_name }} {{ item }}
+  loop: '{{ zfs_pool_devices }}'
+
+- name: Show pool size
+  command: zpool list {{ zfs_pool_name }}
+  changed_when: false

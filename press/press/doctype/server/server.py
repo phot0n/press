@@ -99,6 +99,7 @@ class AutoScaleTriggerRow(TypedDict):
 PUBLIC_SERVER_AUTO_ADD_STORAGE_MIN = 50
 MARIADB_DATA_MNT_POINT = "/opt/volumes/mariadb"
 BENCH_DATA_MNT_POINT = "/opt/volumes/benches"
+ZFS_POOL_NAME = "frappe-zfs-pool"
 
 
 class BaseServer(Document, TagHelpers):
@@ -563,7 +564,24 @@ class BaseServer(Document, TagHelpers):
 		if not self.hostname_abbreviation:
 			self._set_hostname_abbreviation()
 
+		self.validate_zfs()
 		self.validate_mounts()
+
+	def validate_zfs(self):
+		if self.doctype not in ("Server", "Database Server"):
+			return
+
+		if self.is_new() and not self.enable_zfs and self.cluster:
+			self.enable_zfs = frappe.db.get_value("Cluster", self.cluster, "enable_zfs") or 0
+
+		if not self.enable_zfs:
+			return
+
+		if not self.virtual_machine:
+			return
+
+		if not frappe.db.get_value("Virtual Machine", self.virtual_machine, "has_data_volume"):
+			frappe.throw("ZFS requires a data volume on the virtual machine")
 
 	def _set_hostname_abbreviation(self):
 		self.hostname_abbreviation = get_hostname_abbreviation(self.hostname)
@@ -1056,6 +1074,10 @@ class BaseServer(Document, TagHelpers):
 
 	def extend_ec2_volume(self, device=None, log: str | None = None):
 		if self.provider not in ("AWS EC2", "OCI"):
+			return
+		if getattr(self, "enable_zfs", False):
+			# ZFS uses whole disks; grow the pool with `zpool online -e` instead of resize2fs.
+			self.expand_zfs_pool()
 			return
 		# Restart MariaDB if MariaDB disk is full
 		mountpoint = self.guess_data_disk_mountpoint()
@@ -1831,22 +1853,42 @@ class BaseServer(Document, TagHelpers):
 			return
 		machine = frappe.get_doc("Virtual Machine", self.virtual_machine)
 		if machine.has_data_volume and len(machine.volumes) > 1 and not self.mounts:
-			self.fetch_volumes_from_virtual_machine()
-			self.set_default_mount_points()
+			if getattr(self, "enable_zfs", False):
+				# ZFS creates the pool over the data volumes and mounts the dataset itself.
+				# We only need the bind mounts on top of the dataset mount point.
+				self.set_default_zfs_mount_points()
+			else:
+				self.fetch_volumes_from_virtual_machine()
+				self.set_default_mount_points()
 			self.set_mount_properties()
 
 	def fetch_volumes_from_virtual_machine(self):
-		machine = frappe.get_doc("Virtual Machine", self.virtual_machine)
-		for volume in machine.volumes:
-			if volume.device == "/dev/sda1" or (self.provider == "Hetzner" and volume.device == "/dev/sda"):
-				# Skip root volume. This is for AWS other providers may have different root volume
-				continue
+		for volume in self.get_data_volumes():
 			self.append("mounts", {"volume_id": volume.volume_id})
+
+	def is_root_volume(self, volume):
+		# Skip root volume. This is for AWS, other providers may have a different root volume.
+		return volume.device == "/dev/sda1" or (self.provider == "Hetzner" and volume.device == "/dev/sda")
+
+	def get_data_volumes(self):
+		machine = frappe.get_doc("Virtual Machine", self.virtual_machine)
+		return [volume for volume in machine.volumes if volume != machine.get_root_volume()]
 
 	def set_default_mount_points(self):
 		first = self.mounts[0]
 		if self.doctype == "Server":
 			first.mount_point = BENCH_DATA_MNT_POINT
+		elif self.doctype == "Database Server":
+			first.mount_point = MARIADB_DATA_MNT_POINT
+		self.append_default_bind_mounts()
+
+	def set_default_zfs_mount_points(self):
+		# The ZFS dataset is mounted at the data mount point by the zfs_pool role,
+		# so there is no Volume-type mount. Only the bind mounts are needed.
+		self.append_default_bind_mounts()
+
+	def append_default_bind_mounts(self):
+		if self.doctype == "Server":
 			self.append(
 				"mounts",
 				{
@@ -1868,7 +1910,6 @@ class BaseServer(Document, TagHelpers):
 				},
 			)
 		elif self.doctype == "Database Server":
-			first.mount_point = MARIADB_DATA_MNT_POINT
 			self.append(
 				"mounts",
 				{
@@ -1947,6 +1988,83 @@ class BaseServer(Document, TagHelpers):
 
 	def get_volume_mounts(self):
 		return [mount.as_dict() for mount in self.mounts if mount.mount_type == "Volume"]
+
+	def get_zfs_variables(self):
+		if not getattr(self, "enable_zfs", False):
+			return {"enable_zfs": False}
+
+		dataset = "benches" if self.doctype == "Server" else "mariadb"
+		mountpoint = BENCH_DATA_MNT_POINT if self.doctype == "Server" else MARIADB_DATA_MNT_POINT
+		return {
+			"enable_zfs": True,
+			"zfs_pool_name": ZFS_POOL_NAME,
+			"zfs_dataset": dataset,
+			"zfs_mountpoint": mountpoint,
+			"zfs_pool_devices": [
+				self.get_device_from_volume_id(volume.volume_id) for volume in self.get_data_volumes()
+			],
+		}
+
+	@frappe.whitelist()
+	def add_zfs_volume(self, size, iops=None, throughput=None):
+		if not getattr(self, "enable_zfs", False):
+			frappe.throw("ZFS is not enabled on this server")
+
+		if self.provider not in ("AWS EC2", "OCI", "Hetzner"):
+			frappe.throw(f"Adding a ZFS volume is not supported for provider {self.provider}")
+
+		# TODO: push to bg
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Press Job",
+					"job_type": "Add ZFS Volume",
+					"server_type": self.doctype,
+					"server": self.name,
+					"virtual_machine": self.virtual_machine,
+					"arguments": json.dumps(
+						{"size": int(size), "iops": iops, "throughput": throughput},
+						indent=2,
+						sort_keys=True,
+					),
+				}
+			)
+			.insert()
+			.name
+		)
+
+	def add_device_to_zfs_pool(self):
+		"""Add any newly attached data volume to the ZFS pool. Idempotent."""
+		variables = self.get_zfs_variables()
+		if not variables.get("enable_zfs"):
+			frappe.throw("ZFS is not enabled on this server")
+
+		ansible = Ansible(
+			playbook="zfs_pool_extend.yml",
+			server=self,
+			user=self._ssh_user(),
+			port=self._ssh_port(),
+			variables=variables,
+		)
+		return ansible.run()
+
+	def expand_zfs_pool(self):
+		"""Grow the ZFS pool after member volumes were resized at the provider. Idempotent."""
+		variables = self.get_zfs_variables()
+		if not variables.get("enable_zfs"):
+			return None
+
+		try:
+			ansible = Ansible(
+				playbook="zfs_pool_expand.yml",
+				server=self,
+				user=self._ssh_user(),
+				port=self._ssh_port(),
+				variables=variables,
+			)
+			return ansible.run()
+		except Exception:
+			log_error("ZFS Pool Expand Exception", server=self.as_dict())
 
 	def _create_arm_build(self, build: str) -> str | None:
 		from press.press.doctype.deploy_candidate_build.deploy_candidate_build import (
@@ -2823,6 +2941,7 @@ class Server(BaseServer):
 		domain: DF.Link | None
 		enable_logical_replication_during_site_update: DF.Check
 		enable_on_prem_failover_support: DF.Check
+		enable_zfs: DF.Check
 		frappe_public_key: DF.Code | None
 		frappe_user_password: DF.Password | None
 		halt_agent_jobs: DF.Check
@@ -3277,6 +3396,7 @@ class Server(BaseServer):
 					"agent_update_args": " --skip-repo-setup=true",
 					"nat_gateway_ip": self.get_nat_gateway_ip(),
 					**self.get_mount_variables(),
+					**self.get_zfs_variables(),
 				},
 			)
 			play = ansible.run()

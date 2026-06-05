@@ -68,6 +68,7 @@
 		"tags",
 		"mounts_section",
 		"has_data_volume",
+		"enable_zfs",
 		"mounts",
 		"notifications_section",
 		"communication_info",
@@ -478,6 +479,13 @@
 			"fieldtype": "Check",
 			"label": "Has Data Volume",
 			"read_only": 1
+		},
+		{
+			"default": "0",
+			"description": "Run ZFS on the data volume. Requires a data volume. Enables ZFS snapshot/restore.",
+			"fieldname": "enable_zfs",
+			"fieldtype": "Check",
+			"label": "Enable ZFS for Data Volume"
 		},
 		{
 			"fieldname": "mounts",

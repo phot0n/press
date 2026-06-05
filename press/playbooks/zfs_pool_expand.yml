@@ -1,0 +1,8 @@
+---
+- name: Expand ZFS Pool
+  hosts: all
+  become: yes
+  become_user: root
+  gather_facts: no
+  roles:
+    - role: zfs_pool_expand

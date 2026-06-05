@@ -10,6 +10,8 @@
     - role: user
     - role: nginx
     - role: agent
+    - role: zfs_pool
+      when: enable_zfs | default(false) | bool
     - role: mount
     - role: bench
     - role: docker

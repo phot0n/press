@@ -8,6 +8,8 @@
     - role: nat_iptables
     - role: essentials
     - role: user
+    - role: zfs_pool
+      when: enable_zfs | default(false) | bool
     - role: mount
     - role: mariadb
     - role: mariadb_memory_allocator
