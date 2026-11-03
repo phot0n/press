@@ -78,12 +78,12 @@ class TestGroveTrialKey(FrappeTestCase):
 	def statuses(self) -> list[str]:
 		return frappe.get_all("Grove Trial Key", pluck="status", order_by="creation asc")
 
-	def age(self, key: GroveTrialKey) -> None:
+	def age(self, key: GroveTrialKey, days: int = 0) -> None:
 		frappe.db.set_value(
 			"Grove Trial Key",
 			key.name,
 			"modified",
-			add_to_date(now_datetime(), minutes=-61),
+			add_to_date(now_datetime(), days=-days, minutes=-61),
 			update_modified=False,
 		)
 
@@ -299,6 +299,16 @@ class TestGroveTrialKey(FrappeTestCase):
 		grove_trial_key.retry_revokes()
 		self.assertEqual((key.reload().status, key.last_error), ("Revoked", None))
 
+	def test_revoke_available_keys_leaves_the_assigned_ones(self):
+		taken, ready = available(), available()
+		GroveTrialKey.assign(site_named("a.test"), PRODUCT)
+
+		with patch(f"{MODULE}.frappe.enqueue") as enqueue:
+			self.assertEqual(grove_trial_key.revoke_available_keys(), 1)
+
+		self.assertEqual([d.reload().status for d in (ready, taken)], ["Revoking", "Assigned"])
+		self.assertEqual(enqueue.call_args.kwargs["name"], ready.name)
+
 	def test_only_a_revoked_record_can_be_deleted(self):
 		key = available()
 
@@ -307,3 +317,19 @@ class TestGroveTrialKey(FrappeTestCase):
 		key.db_set("status", "Revoked")
 		key.delete()
 		self.assertFalse(frappe.db.exists("Grove Trial Key", key.name))
+
+	def test_a_revoked_record_is_dropped_with_its_secret_once_its_days_have_passed(self):
+		gone, fresh, live = available(), available(), available()
+		gone.db_set("status", "Revoked")
+		fresh.db_set("status", "Revoked")
+		self.age(gone, days=30)
+		self.age(live, days=30)
+
+		GroveTrialKey.clear_old_logs(days=30)
+
+		self.assertEqual(
+			sorted(frappe.get_all("Grove Trial Key", pluck="name")), sorted([fresh.name, live.name])
+		)
+		with self.assertRaisesRegex(frappe.ValidationError, "not found"):
+			gone.get_password("api_key")
+		self.assertEqual(fresh.get_password("api_key"), f"gr_{fresh.grove_key}")

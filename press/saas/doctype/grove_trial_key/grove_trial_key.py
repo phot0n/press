@@ -111,19 +111,22 @@ class GroveTrialKey(Document):
 		)
 
 	@classmethod
-	def queue_revoke(cls, **filters) -> None:
-		"""Mark the matching ready or assigned keys Revoking and queue their revoke at Grove."""
-		for name in frappe.get_all(
+	def queue_revoke(cls, **filters) -> int:
+		"""Mark the matching ready or assigned keys (or the status `filters` names) Revoking and queue
+		their revoke at Grove; the count."""
+		names = frappe.get_all(
 			"Grove Trial Key",
-			filters={**filters, "status": ("in", ("Available", "Assigned"))},
+			filters={"status": ("in", ("Available", "Assigned")), **filters},
 			pluck="name",
-		):
+		)
+		for name in names:
 			frappe.db.set_value("Grove Trial Key", name, "status", "Revoking")
 			frappe.enqueue(
 				"press.saas.doctype.grove_trial_key.grove_trial_key.revoke_trial_key",
 				name=name,
 				enqueue_after_commit=True,
 			)
+		return len(names)
 
 	@frappe.whitelist(methods=["POST"])
 	def revoke(self) -> None:
@@ -150,6 +153,22 @@ class GroveTrialKey(Document):
 		# A record must outlive its live key, so that a failed revoke is retried.
 		if self.status != "Revoked":
 			frappe.throw(_("Use Revoke Key. Only a revoked key record can be deleted."))
+
+	@staticmethod
+	def clear_old_logs(days: int = 30) -> None:
+		"""Log Settings, daily: a Revoked record whose revoke landed `days` ago is history and goes
+		with its secret."""
+		names = frappe.get_all(
+			"Grove Trial Key",
+			filters={"status": "Revoked", "modified": ("<", add_to_date(now_datetime(), days=-days))},
+			pluck="name",
+		)
+		if not names:
+			return
+
+		# A table delete skips the controller, so the secret in __Auth needs its own delete.
+		frappe.db.delete("__Auth", {"doctype": "Grove Trial Key", "name": ("in", names)})
+		frappe.db.delete("Grove Trial Key", {"name": ("in", names)})
 
 	def revoke_at_grove(self) -> None:
 		"""Under the team the key was minted under. Safe to repeat: Grove answers a revoked key's
@@ -180,6 +199,14 @@ def revoke_trial_key(name: str) -> None:
 	key = frappe.get_doc("Grove Trial Key", name)
 	if key.status == "Revoking":
 		key.try_revoke_at_grove()
+
+
+@frappe.whitelist(methods=["POST"])
+def revoke_available_keys() -> int:
+	"""Desk, Revoke Available Keys: every ready key in the pools is queued for revoke at Grove. An
+	Assigned key stays with its site."""
+	frappe.has_permission("Grove Trial Key", "write", throw=True)
+	return GroveTrialKey.queue_revoke(status="Available")
 
 
 def refill_trial_keys() -> None:
