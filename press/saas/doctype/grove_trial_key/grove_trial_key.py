@@ -114,9 +114,10 @@ class GroveTrialKey(Document):
 
 	@classmethod
 	def mint_for_assignment(cls, site: Site, product_trial: str) -> GroveTrialKey | None:
-		"""One key minted for a site that found its product's pool empty. None where the refill mints
-		none either (not enrolled, no sized pool row, refill paused) and when Grove refuses or is slow,
-		which is logged against the site: the trial runs without AI."""
+		"""One key minted for a site that found its product's pool empty; Pause Pool Refill does not
+		stop it, Pause Key Assignment does. None while Press is not enrolled or the product has no sized
+		pool row, and when Grove refuses or is slow, which is logged against the site: the trial runs
+		without AI."""
 		settings: GroveSettings = frappe.get_cached_doc("Grove Settings")
 		row = next(
 			(
@@ -126,7 +127,7 @@ class GroveTrialKey(Document):
 			),
 			None,
 		)
-		if not row or not settings.is_enrolled or settings.pause_pool_refill:
+		if not row or not settings.is_enrolled:
 			return None
 
 		try:

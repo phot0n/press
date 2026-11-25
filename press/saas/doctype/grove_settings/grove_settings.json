@@ -72,7 +72,7 @@
 		},
 		{
 			"default": "0",
-			"description": "Stops the minting of new keys, by the 5-minute job and by a site that finds its pool empty. The pools keep their sizes and their ready keys; retries of revokes still run.",
+			"description": "Stops the 5-minute job from minting new keys. The pools keep their sizes and their ready keys; retries of revokes still run, and a site that finds its pool empty still mints its own key.",
 			"fieldname": "pause_pool_refill",
 			"fieldtype": "Check",
 			"label": "Pause Pool Refill"
@@ -97,7 +97,7 @@
 		},
 		{
 			"default": "0",
-			"description": "Stops a new trial site from taking a key from its pool. It runs without one; a site that already holds a key keeps it.",
+			"description": "Stops a new trial site from taking a key from its pool or minting its own. It runs without one; a site that already holds a key keeps it.",
 			"fieldname": "pause_key_assignment",
 			"fieldtype": "Check",
 			"label": "Pause Key Assignment"
@@ -118,7 +118,7 @@
 	"grid_page_length": 50,
 	"issingle": 1,
 	"links": [],
-	"modified": "2026-11-25 12:00:00.000000",
+	"modified": "2026-11-25 18:00:00.000000",
 	"modified_by": "Administrator",
 	"module": "SaaS",
 	"name": "Grove Settings",

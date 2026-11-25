@@ -218,18 +218,23 @@ class TestGroveTrialKey(FrappeTestCase):
 			[{"gateway_url": GATEWAY, "api_key": f"gr_{key.grove_key}"}],
 		)
 
-	def test_an_empty_pool_mints_nothing_where_the_refill_mints_none(self):
+	def test_an_empty_pool_mints_nothing_while_the_pool_is_off_or_assignment_is_paused(self):
 		for sizes, fields in (
 			({PRODUCT: 0}, {}),
 			({OTHER: 3}, {}),
 			({PRODUCT: 3}, {"control_api_key": "", "control_api_secret": ""}),
-			({PRODUCT: 3}, {"pause_pool_refill": 1}),
+			({PRODUCT: 3}, {"pause_key_assignment": 1}),
 		):
 			pools(sizes, **fields)
 
 			self.assertIsNone(GroveTrialKey.assign(site_named("a.test"), PRODUCT))
 
 		self.provision.assert_not_called()
+
+	def test_a_paused_refill_does_not_stop_the_mint_for_a_site(self):
+		pools({PRODUCT: 3}, pause_pool_refill=1)
+
+		self.assertEqual(GroveTrialKey.assign(site_named("a.test"), PRODUCT).status, "Assigned")
 
 	def test_a_mint_grove_refuses_leaves_the_site_without_a_key(self):
 		self.provision.side_effect = frappe.ValidationError("Press Team holds its 50 keys.")
