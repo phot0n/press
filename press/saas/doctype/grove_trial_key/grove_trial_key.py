@@ -97,7 +97,7 @@ class GroveTrialKey(Document):
 			for_update=True,
 			skip_locked=True,
 		)
-		key = cls("Grove Trial Key", name) if name else cls.mint_for_assignment(product_trial)
+		key = cls("Grove Trial Key", name) if name else cls.mint_for_assignment(site, product_trial)
 		if not key:
 			return None
 
@@ -113,10 +113,10 @@ class GroveTrialKey(Document):
 		return key
 
 	@classmethod
-	def mint_for_assignment(cls, product_trial: str) -> GroveTrialKey | None:
+	def mint_for_assignment(cls, site: Site, product_trial: str) -> GroveTrialKey | None:
 		"""One key minted for a site that found its product's pool empty. None where the refill mints
 		none either (not enrolled, no sized pool row, refill paused) and when Grove refuses or is slow,
-		which is logged: the trial runs without AI."""
+		which is logged against the site: the trial runs without AI."""
 		settings: GroveSettings = frappe.get_cached_doc("Grove Settings")
 		row = next(
 			(
@@ -132,7 +132,9 @@ class GroveTrialKey(Document):
 		try:
 			return cls.provision(settings, row, timeout=ASSIGNMENT_MINT_TIMEOUT_SECONDS)
 		except Exception:
-			frappe.log_error(title="Grove trial key mint failed")
+			frappe.log_error(
+				title="Grove trial key mint failed", reference_doctype="Site", reference_name=site.name
+			)
 			return None
 
 	def write_config(self, site: Site) -> None:

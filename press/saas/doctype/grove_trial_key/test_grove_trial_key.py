@@ -240,7 +240,10 @@ class TestGroveTrialKey(FrappeTestCase):
 
 		self.assertEqual(self.statuses(), [])
 		self.assertIsNone(site.get_config_value_for_key("ai_keys"))
-		log_error.assert_called_once()
+		# The operator finds the keyless site from the log.
+		log_error.assert_called_once_with(
+			title="Grove trial key mint failed", reference_doctype="Site", reference_name="a.test"
+		)
 
 	def test_paused_assignment_leaves_the_ready_key_in_the_pool(self):
 		key = available()
