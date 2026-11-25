@@ -66,20 +66,22 @@ class GroveSettings(Document):
 		self.control_api_secret = credential["api_secret"]
 		self.save()
 
-	def call(self, method: str, **body):
+	def call(self, method: str, timeout: float | tuple[float, float] = TIMEOUT, **body):
 		"""POST `method` at Grove as Press; Grove's own refusal line is what the caller reads."""
 		if not self.is_enrolled:
 			frappe.throw(_("AI is not set up: enroll Press at Grove in Grove Settings."))
 		headers = {"Authorization": f"token {self.control_api_key}:{self.get_password('control_api_secret')}"}
 		try:
 			response = requests.post(
-				f"{self.base_url}/api/method/{method}", json=body, headers=headers, timeout=TIMEOUT
+				f"{self.base_url}/api/method/{method}", json=body, headers=headers, timeout=timeout
 			)
 		except (requests.ConnectionError, requests.Timeout) as e:
 			raise frappe.ValidationError(_("Grove can't be reached right now.")) from e
 		return read(response)
 
-	def provision_key(self, row: GroveTrialProduct, title: str) -> dict:
+	def provision_key(
+		self, row: GroveTrialProduct, title: str, timeout: float | tuple[float, float] = TIMEOUT
+	) -> dict:
 		"""Mint one key into `row`'s product's pool under the trial team: titled `title` (the Grove Trial
 		Key record's id, so Grove's list names Press's record), in the trial geography, at the trial cap,
 		no expiry (Press revokes it on its own clock). What it may call is the team's, set at Grove, plus
@@ -93,7 +95,7 @@ class GroveSettings(Document):
 		}
 		if row.model_group:
 			body["model_groups"] = [row.model_group]
-		return self.call("grove.api.keys.provision_key", **body)
+		return self.call("grove.api.keys.provision_key", timeout=timeout, **body)
 
 	def update_caps(self, team: str, caps: dict[str, float]) -> list[dict]:
 		"""Set several keys' caps at once, {key: USD}; Grove saves all or none."""

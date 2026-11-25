@@ -72,7 +72,7 @@
 		},
 		{
 			"default": "0",
-			"description": "Stops the 5-minute job from minting new keys. The pools keep their sizes and their ready keys; retries of revokes still run.",
+			"description": "Stops the minting of new keys, by the 5-minute job and by a site that finds its pool empty. The pools keep their sizes and their ready keys; retries of revokes still run.",
 			"fieldname": "pause_pool_refill",
 			"fieldtype": "Check",
 			"label": "Pause Pool Refill"
@@ -97,7 +97,7 @@
 		},
 		{
 			"default": "0",
-			"description": "Stops a new trial site from taking a key from its pool. It runs without one, as with an empty pool; a site that already holds a key keeps it.",
+			"description": "Stops a new trial site from taking a key from its pool. It runs without one; a site that already holds a key keeps it.",
 			"fieldname": "pause_key_assignment",
 			"fieldtype": "Check",
 			"label": "Pause Key Assignment"
@@ -108,7 +108,7 @@
 			"label": "Pools"
 		},
 		{
-			"description": "One row per Product Trial: how many trial keys Press keeps minted and ready for its sites, under the trial team, and the Grove Model Group those keys add to the team's catalog. A job every 5 minutes refills every pool. A product without a row gets no key.",
+			"description": "One row per Product Trial: how many trial keys Press keeps minted and ready for its sites, under the trial team, and the Grove Model Group those keys add to the team's catalog. A job every 5 minutes refills every pool, and a site that finds its pool empty mints its own key. A product without a row gets no key.",
 			"fieldname": "trial_products",
 			"fieldtype": "Table",
 			"label": "Trial Products",
@@ -118,7 +118,7 @@
 	"grid_page_length": 50,
 	"issingle": 1,
 	"links": [],
-	"modified": "2026-11-03 13:13:30.117920",
+	"modified": "2026-11-25 12:00:00.000000",
 	"modified_by": "Administrator",
 	"module": "SaaS",
 	"name": "Grove Settings",

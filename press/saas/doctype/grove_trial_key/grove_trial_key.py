@@ -11,6 +11,8 @@ from frappe.model.document import Document
 from frappe.model.naming import make_autoname
 from frappe.utils import add_to_date, cint, flt, now_datetime
 
+from press.saas.doctype.grove_settings.grove_settings import TIMEOUT
+
 if TYPE_CHECKING:
 	from press.press.doctype.site.site import Site
 	from press.saas.doctype.grove_settings.grove_settings import GroveSettings
@@ -18,15 +20,19 @@ if TYPE_CHECKING:
 
 # One batch per run keeps the job short.
 REFILL_BATCH_SIZE = 50
+# A site that mints its own key waits on Grove in the signup request, so it gives up sooner than
+# a job does.
+ASSIGNMENT_MINT_TIMEOUT_SECONDS = 10
 # A revoke Grove refused is tried again once the record has sat this long.
 RETRY_AFTER_MINUTES = 60
 
 
 class GroveTrialKey(Document):
-	"""One Grove key minted ahead under the trial team for one Product Trial and held here with its
-	secret, until a site of that product takes it into its site config as `ai_keys`. The key carries
-	no expiry at Grove: Press revokes it once the site is archived, or once Grove Settings' Revokes
-	Automatically After days have passed since the site took it."""
+	"""One Grove key minted under the trial team for one Product Trial, ahead into its pool or by the
+	site that found the pool empty, and held here with its secret, until a site of that product takes
+	it into its site config as `ai_keys`. The key carries no expiry at Grove: Press revokes it once the
+	site is archived, or once Grove Settings' Revokes Automatically After days have passed since the
+	site took it."""
 
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
@@ -51,13 +57,18 @@ class GroveTrialKey(Document):
 	# end: auto-generated types
 
 	@classmethod
-	def provision(cls, settings: GroveSettings, row: GroveTrialProduct) -> GroveTrialKey:
+	def provision(
+		cls,
+		settings: GroveSettings,
+		row: GroveTrialProduct,
+		timeout: float | tuple[float, float] = TIMEOUT,
+	) -> GroveTrialKey:
 		"""Mint one key into `row`'s product's pool, titled at Grove by this record's id (taken from the
 		series before the mint), in the row's Model Group on top of the team's when it names one. A
-		crash between the mint and the insert leaves a capped key under the trial team titled by an id
-		no record carries; Grove Desk shows it."""
+		crash between the mint and the insert, or a site setup that rolls back after its own mint, leaves
+		a capped key under the trial team titled by an id no record carries; Grove Desk shows it."""
 		name = make_autoname(frappe.get_meta("Grove Trial Key").autoname)
-		minted = settings.provision_key(row, title=name)
+		minted = settings.provision_key(row, title=name, timeout=timeout)
 		return frappe.get_doc(
 			{
 				"doctype": "Grove Trial Key",
@@ -73,9 +84,9 @@ class GroveTrialKey(Document):
 
 	@classmethod
 	def assign(cls, site: Site, product_trial: str, request: str | None = None) -> GroveTrialKey | None:
-		"""The oldest ready key of the product, taken for the site and written into its configuration;
-		the job the caller raises carries it. None on an empty pool or while assignment is paused: the
-		trial runs without AI."""
+		"""The oldest ready key of the product, or one minted now when the pool is empty, taken for the
+		site and written into its configuration; the job the caller raises carries it. None while
+		assignment is paused or when no key could be minted: the trial runs without AI."""
 		if frappe.db.get_single_value("Grove Settings", "pause_key_assignment"):
 			return None
 
@@ -86,10 +97,10 @@ class GroveTrialKey(Document):
 			for_update=True,
 			skip_locked=True,
 		)
-		if not name:
+		key = cls("Grove Trial Key", name) if name else cls.mint_for_assignment(product_trial)
+		if not key:
 			return None
 
-		key = cls("Grove Trial Key", name)
 		key.db_set(
 			{
 				"status": "Assigned",
@@ -100,6 +111,29 @@ class GroveTrialKey(Document):
 		)
 		key.write_config(site)
 		return key
+
+	@classmethod
+	def mint_for_assignment(cls, product_trial: str) -> GroveTrialKey | None:
+		"""One key minted for a site that found its product's pool empty. None where the refill mints
+		none either (not enrolled, no sized pool row, refill paused) and when Grove refuses or is slow,
+		which is logged: the trial runs without AI."""
+		settings: GroveSettings = frappe.get_cached_doc("Grove Settings")
+		row = next(
+			(
+				row
+				for row in settings.trial_products
+				if row.product_trial == product_trial and cint(row.pool_size)
+			),
+			None,
+		)
+		if not row or not settings.is_enrolled or settings.pause_pool_refill:
+			return None
+
+		try:
+			return cls.provision(settings, row, timeout=ASSIGNMENT_MINT_TIMEOUT_SECONDS)
+		except Exception:
+			frappe.log_error(title="Grove trial key mint failed")
+			return None
 
 	def write_config(self, site: Site) -> None:
 		"""`ai_keys` into the site's configuration, the shape Central writes for its own trial servers.

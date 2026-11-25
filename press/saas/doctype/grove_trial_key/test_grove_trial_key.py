@@ -13,7 +13,10 @@ from press.press.doctype.site.test_site import create_test_site
 from press.saas.doctype.grove_settings.grove_settings import GroveSettings
 from press.saas.doctype.grove_settings.test_grove_settings import enrolled, pool_rows, product_trial
 from press.saas.doctype.grove_trial_key import grove_trial_key
-from press.saas.doctype.grove_trial_key.grove_trial_key import GroveTrialKey
+from press.saas.doctype.grove_trial_key.grove_trial_key import (
+	ASSIGNMENT_MINT_TIMEOUT_SECONDS,
+	GroveTrialKey,
+)
 
 MODULE = "press.saas.doctype.grove_trial_key.grove_trial_key"
 GATEWAY = "https://gw"
@@ -59,7 +62,7 @@ class TestGroveTrialKey(FrappeTestCase):
 			patch.object(
 				GroveSettings,
 				"provision_key",
-				side_effect=lambda row, title: minted(frappe.generate_hash(length=10)),
+				side_effect=lambda row, title, timeout: minted(frappe.generate_hash(length=10)),
 			)
 		)
 		self.revoke = self.start(patch.object(GroveSettings, "revoke_key"))
@@ -196,8 +199,48 @@ class TestGroveTrialKey(FrappeTestCase):
 			site.get_config_value_for_key("ai_keys"),
 			[{"gateway_url": GATEWAY, "api_key": f"gr_{first.grove_key}"}],
 		)
-		self.assertIsNone(GroveTrialKey.assign(site_named("c.test"), PRODUCT))
+		# Its own pool empty, a site mints a key of its product and leaves the other's.
+		self.assertEqual(GroveTrialKey.assign(site_named("c.test"), PRODUCT).product_trial, PRODUCT)
 		self.assertEqual(GroveTrialKey.assign(site_named("d.test"), OTHER).name, others.name)
+
+	def test_an_empty_pool_mints_a_key_for_the_site(self):
+		site = site_named("a.test")
+
+		key = GroveTrialKey.assign(site, PRODUCT, "PTR-1")
+
+		self.assertEqual((key.status, key.site, key.product_trial), ("Assigned", "a.test", PRODUCT))
+		self.assertEqual(
+			self.provision.call_args.kwargs,
+			{"title": key.name, "timeout": ASSIGNMENT_MINT_TIMEOUT_SECONDS},
+		)
+		self.assertEqual(
+			site.get_config_value_for_key("ai_keys"),
+			[{"gateway_url": GATEWAY, "api_key": f"gr_{key.grove_key}"}],
+		)
+
+	def test_an_empty_pool_mints_nothing_where_the_refill_mints_none(self):
+		for sizes, fields in (
+			({PRODUCT: 0}, {}),
+			({OTHER: 3}, {}),
+			({PRODUCT: 3}, {"control_api_key": "", "control_api_secret": ""}),
+			({PRODUCT: 3}, {"pause_pool_refill": 1}),
+		):
+			pools(sizes, **fields)
+
+			self.assertIsNone(GroveTrialKey.assign(site_named("a.test"), PRODUCT))
+
+		self.provision.assert_not_called()
+
+	def test_a_mint_grove_refuses_leaves_the_site_without_a_key(self):
+		self.provision.side_effect = frappe.ValidationError("Press Team holds its 50 keys.")
+		site = site_named("a.test")
+
+		with patch(f"{MODULE}.frappe.log_error") as log_error:
+			self.assertIsNone(GroveTrialKey.assign(site, PRODUCT))
+
+		self.assertEqual(self.statuses(), [])
+		self.assertIsNone(site.get_config_value_for_key("ai_keys"))
+		log_error.assert_called_once()
 
 	def test_paused_assignment_leaves_the_ready_key_in_the_pool(self):
 		key = available()
